@@ -13,7 +13,7 @@ import { ShoppingItem } from '@/types/shopping';
 interface ItemEditDialogProps {
   item: ShoppingItem | null;
   open: boolean;
-  onClose: () => void;
+  onClose: (open: boolean) => void;
   onSave: (itemId: string, newName: string) => void;
 }
 
@@ -26,16 +26,14 @@ export const ItemEditDialog = ({
   const [itemName, setItemName] = useState('');
 
   useEffect(() => {
-    if (item) {
-      setItemName(item.name);
-    }
-  }, [item, open]);
+    if (item) setItemName(item.name);
+    else setItemName('');
+  }, [item]);
 
   const handleSave = () => {
-    if (item && itemName.trim()) {
-      onSave(item.id, itemName.trim());
-      onClose();
-    }
+    if (!item || !itemName.trim()) return;
+    onSave(item.id, itemName.trim());
+    onClose(false);
   };
 
   return (
@@ -44,28 +42,26 @@ export const ItemEditDialog = ({
         <DialogHeader>
           <DialogTitle>Editar nome do item</DialogTitle>
         </DialogHeader>
+
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              Nome do item
-            </label>
-            <Input
-              value={itemName}
-              onChange={(e) => setItemName(e.target.value)}
-              placeholder="Digite o novo nome"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') onClose();
-              }}
-            />
-          </div>
+          <label className="text-sm font-medium text-foreground">
+            Nome do item
+          </label>
+          <Input
+            value={itemName}
+            onChange={(e) => setItemName(e.target.value)}
+            placeholder="Digite o novo nome"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave();
+            }}
+          />
         </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={() => onClose(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={!itemName.trim()}>
             Salvar
           </Button>
         </DialogFooter>

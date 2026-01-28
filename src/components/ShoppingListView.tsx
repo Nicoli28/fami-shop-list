@@ -301,24 +301,19 @@ export const ShoppingListView = () => {
         isCreating={isCreatingNewList}
       />
 
-      <ListSwitcherDialog
-        open={listSwitcherOpen}
-        onClose={() => setListSwitcherOpen(false)}
-        currentListId={currentList?.id || null}
-        lists={allLists}
-        onSwitchList={switchList}
-        onCreateNew={() => {
-          setListSwitcherOpen(false);
-          setIsCreatingNewList(true);
-          setEditingList(null);
-          setListManagementOpen(true);
-        }}
-        onEditList={(list) => {
-          setListSwitcherOpen(false);
-          setEditingList(list);
-          setIsCreatingNewList(false);
-          setListManagementOpen(true);
-        }}
+      <ItemEditDialog
+        item={itemToEdit}
+        open={itemEditOpen}
+        onClose={setItemEditOpen}
+        onSave={handleItemNameSave}
+      />
+
+      <ListManagementDialog
+        list={editingList}
+        open={listManagementOpen}
+        onClose={setListManagementOpen}
+        onSave={isCreatingNewList ? handleCreateNewList : handleEditListName}
+        isCreating={isCreatingNewList}
       />
     </div>
   );
