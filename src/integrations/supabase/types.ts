@@ -14,7 +14,260 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_custom: boolean
+          list_id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_custom?: boolean
+          list_id: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_custom?: boolean
+          list_id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_history: {
+        Row: {
+          id: string
+          item_name: string
+          market: string | null
+          recorded_at: string
+          unit_price: number
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_name: string
+          market?: string | null
+          recorded_at?: string
+          unit_price: number
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_name?: string
+          market?: string | null
+          recorded_at?: string
+          unit_price?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      receipt_items: {
+        Row: {
+          id: string
+          name: string
+          quantity: number
+          receipt_id: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          quantity: number
+          receipt_id: string
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          quantity?: number
+          receipt_id?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_items_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipts: {
+        Row: {
+          created_at: string
+          discount_amount: number | null
+          has_discount: boolean
+          id: string
+          list_id: string | null
+          market: string | null
+          payment_method: string | null
+          purchase_date: string
+          title: string
+          total_amount: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discount_amount?: number | null
+          has_discount?: boolean
+          id?: string
+          list_id?: string | null
+          market?: string | null
+          payment_method?: string | null
+          purchase_date?: string
+          title: string
+          total_amount: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discount_amount?: number | null
+          has_discount?: boolean
+          id?: string
+          list_id?: string | null
+          market?: string | null
+          payment_method?: string | null
+          purchase_date?: string
+          title?: string
+          total_amount?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopping_items: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_checked: boolean
+          market: string | null
+          name: string
+          quantity: number
+          sort_order: number
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_checked?: boolean
+          market?: string | null
+          name: string
+          quantity?: number
+          sort_order?: number
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_checked?: boolean
+          market?: string | null
+          name?: string
+          quantity?: number
+          sort_order?: number
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopping_lists: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          month: number
+          name: string
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          month: number
+          name?: string
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          month?: number
+          name?: string
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
