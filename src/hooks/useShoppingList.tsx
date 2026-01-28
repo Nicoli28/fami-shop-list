@@ -276,6 +276,171 @@ export const useShoppingList = () => {
     toast.success('Item removido');
   };
 
+  const updateItemName = async (itemId: string, newName: string) => {
+    if (!newName.trim()) {
+      toast.error('Nome do item não pode estar vazio');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('shopping_items')
+      .update({ name: newName.trim() })
+      .eq('id', itemId);
+
+    if (error) {
+      toast.error('Erro ao atualizar nome do item');
+      return;
+    }
+
+    setCategories(prev => prev.map(cat => ({
+      ...cat,
+      items: cat.items.map(item => 
+        item.id === itemId ? { ...item, name: newName.trim() } : item
+      )
+    })));
+
+    toast.success('Nome do item atualizado!');
+  };
+
+  const updateCategoryName = async (categoryId: string, newName: string) => {
+    if (!newName.trim()) {
+      toast.error('Nome da categoria não pode estar vazio');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('categories')
+      .update({ name: newName.trim() })
+      .eq('id', categoryId);
+
+    if (error) {
+      toast.error('Erro ao atualizar nome da categoria');
+      return;
+    }
+
+    setCategories(prev => prev.map(cat => 
+      cat.id === categoryId ? { ...cat, name: newName.trim() } : cat
+    ));
+
+    toast.success('Nome da categoria atualizado!');
+  };
+
+  const updateListName = async (listId: string, newName: string) => {
+    if (!newName.trim()) {
+      toast.error('Nome da lista não pode estar vazio');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('shopping_lists')
+      .update({ name: newName.trim() })
+      .eq('id', listId);
+
+    if (error) {
+      toast.error('Erro ao atualizar nome da lista');
+      return;
+    }
+
+    if (currentList) {
+      setCurrentList({ ...currentList, name: newName.trim() });
+    }
+
+    toast.success('Nome da lista atualizado!');
+  };
+
+  const createCustomList = async (listName: string) => {
+    if (!user) return;
+
+    const { data: newList, error: listError } = await supabase
+      .from('shopping_lists')
+      .insert({
+        user_id: user.id,
+        name: listName.trim(),
+        month: 0,
+        year: 0,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (listError || !newList) {
+      console.error('Error creating list:', listError);
+      toast.error('Erro ao criar lista');
+      return;
+    }
+
+    setCurrentList(newList as ShoppingList);
+
+    // Create default categories for new list
+    const categoryInserts = DEFAULT_CATEGORIES.map((name, index) => ({
+      list_id: newList.id,
+      name,
+      is_custom: name === 'Extra',
+      sort_order: index
+    }));
+
+    const { data: createdCategories, error: catError } = await supabase
+      .from('categories')
+      .insert(categoryInserts)
+      .select();
+
+    if (catError || !createdCategories) {
+      console.error('Error creating categories:', catError);
+      toast.error('Erro ao criar categorias');
+      return;
+    }
+
+    setCategories(
+      createdCategories.map(cat => ({ ...cat, items: [] } as CategoryWithItems))
+    );
+
+    toast.success('Lista criada com sucesso!');
+  };
+
+  const switchList = async (listId: string) => {
+    // Deactivate current list
+    if (currentList) {
+      await supabase
+        .from('shopping_lists')
+        .update({ is_active: false })
+        .eq('id', currentList.id);
+    }
+
+    // Activate new list
+    const { data: selectedList, error: fetchError } = await supabase
+      .from('shopping_lists')
+      .update({ is_active: true })
+      .eq('id', listId)
+      .select()
+      .single();
+
+    if (fetchError || !selectedList) {
+      toast.error('Erro ao mudar lista');
+      return;
+    }
+
+    setCurrentList(selectedList as ShoppingList);
+    await fetchCategoriesAndItems(listId);
+    toast.success('Lista alterada!');
+  };
+
+  const getAllLists = useCallback(async () => {
+    if (!user) return [];
+
+    const { data: lists, error } = await supabase
+      .from('shopping_lists')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching lists:', error);
+      return [];
+    }
+
+    return (lists || []) as ShoppingList[];
+  }, [user]);
+
   const calculateSubtotal = useCallback(() => {
     return categories.reduce((total, cat) => {
       return total + cat.items.reduce((catTotal, item) => {
@@ -308,6 +473,12 @@ export const useShoppingList = () => {
     toggleItemChecked,
     addItem,
     deleteItem,
+    updateItemName,
+    updateCategoryName,
+    updateListName,
+    createCustomList,
+    switchList,
+    getAllLists,
     calculateSubtotal,
     getItemsWithPrice,
     refreshList: fetchOrCreateList

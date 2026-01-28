@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ShoppingItemCard } from './ShoppingItemCard';
@@ -13,6 +13,8 @@ interface CategorySectionProps {
   onPriceClick: (item: ShoppingItem) => void;
   onDeleteItem: (itemId: string) => void;
   onAddItem: (categoryId: string, name: string) => void;
+  onEditCategoryName: (category: CategoryWithItems) => void;
+  onEditItemName: (item: ShoppingItem) => void;
 }
 
 const getCategoryIcon = (name: string): string => {
@@ -36,7 +38,9 @@ export const CategorySection = ({
   onToggleChecked,
   onPriceClick,
   onDeleteItem,
-  onAddItem
+  onAddItem,
+  onEditCategoryName,
+  onEditItemName
 }: CategorySectionProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [newItemName, setNewItemName] = useState('');
@@ -67,7 +71,7 @@ export const CategorySection = ({
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1">
           <span className="text-2xl">{getCategoryIcon(category.name)}</span>
           <div className="text-left">
             <h3 className="font-semibold text-foreground">{category.name}</h3>
@@ -76,12 +80,24 @@ export const CategorySection = ({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {categoryTotal > 0 && (
             <span className="text-sm font-semibold text-primary">
               R$ {categoryTotal.toFixed(2)}
             </span>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-full text-muted-foreground hover:text-primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditCategoryName(category);
+            }}
+            title="Editar categoria"
+          >
+            <Edit2 className="w-4 h-4" />
+          </Button>
           {isExpanded ? (
             <ChevronDown className="w-5 h-5 text-muted-foreground" />
           ) : (
@@ -104,6 +120,7 @@ export const CategorySection = ({
               onToggleChecked={onToggleChecked}
               onPriceClick={onPriceClick}
               onDelete={onDeleteItem}
+              onEditName={onEditItemName}
             />
           ))}
 
