@@ -181,7 +181,7 @@ export const ShoppingListView = () => {
       </header>
 
       {/* Content */}
-      <main className="max-w-lg mx-auto px-4 py-4 pb-40">
+      <main className="max-w-lg mx-auto px-4 py-4 pb-52">
         {activeTab === 'list' ? (
           <div className="space-y-4">
             {categories.map((category) => (
@@ -301,19 +301,22 @@ export const ShoppingListView = () => {
         isCreating={isCreatingNewList}
       />
 
-      <ItemEditDialog
-        item={itemToEdit}
-        open={itemEditOpen}
-        onClose={setItemEditOpen}
-        onSave={handleItemNameSave}
-      />
-
-      <ListManagementDialog
-        list={editingList}
-        open={listManagementOpen}
-        onClose={setListManagementOpen}
-        onSave={isCreatingNewList ? handleCreateNewList : handleEditListName}
-        isCreating={isCreatingNewList}
+      <ListSwitcherDialog
+        open={listSwitcherOpen}
+        onClose={() => setListSwitcherOpen(false)}
+        currentListId={currentList?.id || null}
+        lists={allLists}
+        onSwitchList={switchList}
+        onCreateNew={() => {
+          setIsCreatingNewList(true);
+          setEditingList(null);
+          setListManagementOpen(true);
+        }}
+        onEditList={(list) => {
+          setEditingList(list);
+          setIsCreatingNewList(false);
+          setListManagementOpen(true);
+        }}
       />
     </div>
   );
