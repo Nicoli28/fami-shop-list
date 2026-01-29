@@ -397,6 +397,35 @@ export const useShoppingList = () => {
     toast.success('Lista criada com sucesso!');
   };
 
+  const addCategory = async (categoryName: string) => {
+    if (!currentList) {
+      toast.error('Nenhuma lista ativa');
+      return;
+    }
+
+    const maxSortOrder = categories.reduce((max, cat) => Math.max(max, cat.sort_order), -1);
+
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({
+        list_id: currentList.id,
+        name: categoryName.trim(),
+        is_custom: true,
+        sort_order: maxSortOrder + 1
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('Error creating category:', error);
+      toast.error('Erro ao criar seção');
+      return;
+    }
+
+    setCategories(prev => [...prev, { ...data, items: [] } as CategoryWithItems]);
+    toast.success('Seção criada!');
+  };
+
   const switchList = async (listId: string) => {
     // Deactivate current list
     if (currentList) {
@@ -481,6 +510,7 @@ export const useShoppingList = () => {
     getAllLists,
     calculateSubtotal,
     getItemsWithPrice,
+    addCategory,
     refreshList: fetchOrCreateList
   };
 };
