@@ -28,15 +28,16 @@ export const ShoppingItemCard = ({
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 p-3 rounded-xl bg-card border border-border/50 transition-all',
+        'flex flex-col gap-2 p-3 rounded-xl bg-card border border-border/50 transition-all',
         item.is_checked && 'opacity-60 bg-muted/50'
       )}
     >
-      <div className="flex items-start gap-3">
+      {/* Row 1: Checkbox + Name + Actions */}
+      <div className="flex items-center gap-2">
         <button
           onClick={() => onToggleChecked(item.id)}
           className={cn(
-            'w-6 h-6 rounded-full border-2 flex items-center justify-center mt-0.5',
+            'w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0',
             item.is_checked
               ? 'bg-primary border-primary'
               : 'border-muted-foreground/30'
@@ -49,14 +50,14 @@ export const ShoppingItemCard = ({
 
         <div
           className={cn(
-            'flex-1 cursor-pointer',
+            'flex-1 min-w-0 cursor-pointer',
             item.is_checked && 'line-through'
           )}
           onClick={() => onPriceClick(item)}
         >
-          <p className="text-sm font-medium">{item.name}</p>
+          <p className="text-sm font-medium truncate">{item.name}</p>
           {item.unit_price && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground truncate">
               R$ {item.unit_price.toFixed(2)}
               {item.market && ` • ${item.market}`}
             </p>
@@ -66,6 +67,7 @@ export const ShoppingItemCard = ({
         <Button
           variant="ghost"
           size="icon"
+          className="h-8 w-8 shrink-0"
           onClick={() => onEditName(item)}
         >
           <Edit2 className="w-4 h-4" />
@@ -74,17 +76,20 @@ export const ShoppingItemCard = ({
         <Button
           variant="ghost"
           size="icon"
+          className="h-8 w-8 shrink-0"
           onClick={() => onDelete(item.id)}
         >
           <Trash2 className="w-4 h-4" />
         </Button>
       </div>
 
-      <div className="flex justify-between items-center px-9">
+      {/* Row 2: Quantity controls + Total price */}
+      <div className="flex justify-between items-center pl-8">
         <div className="flex items-center gap-1">
           <Button
             size="icon"
             variant="ghost"
+            className="h-8 w-8"
             disabled={item.quantity === 0}
             onClick={() =>
               onQuantityChange(item.id, Math.max(0, item.quantity - 1))
@@ -92,12 +97,13 @@ export const ShoppingItemCard = ({
           >
             <Minus className="w-3 h-3" />
           </Button>
-          <span className="w-8 text-center font-semibold">
+          <span className="w-8 text-center font-semibold text-sm">
             {item.quantity}
           </span>
           <Button
             size="icon"
             variant="ghost"
+            className="h-8 w-8"
             onClick={() =>
               onQuantityChange(item.id, item.quantity + 1)
             }
@@ -107,15 +113,15 @@ export const ShoppingItemCard = ({
         </div>
 
         {totalPrice !== null ? (
-          <p className="font-semibold text-primary">
+          <p className="font-semibold text-primary text-sm">
             R$ {totalPrice.toFixed(2)}
           </p>
         ) : (
           <button
             onClick={() => onPriceClick(item)}
-            className="text-xs text-muted-foreground"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            + preço
+            + adicionar preço
           </button>
         )}
       </div>
