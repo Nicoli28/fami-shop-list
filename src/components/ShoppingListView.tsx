@@ -10,14 +10,16 @@ import { ItemEditDialog } from '@/components/ItemEditDialog';
 import { CategoryEditDialog } from '@/components/CategoryEditDialog';
 import { ListManagementDialog } from '@/components/ListManagementDialog';
 import { ListSwitcherDialog } from '@/components/ListSwitcherDialog';
+import { AddCategoryDialog } from '@/components/AddCategoryDialog';
+import { AnalyticsView } from '@/components/AnalyticsView';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { ShoppingItem, CategoryWithItems } from '@/types/shopping';
 import { ReceiptWithItems } from '@/hooks/useReceipts';
-import { ShoppingCart, Receipt as ReceiptIcon, Loader2, List } from 'lucide-react';
+import { ShoppingCart, Receipt as ReceiptIcon, Loader2, List, Plus, BarChart3 } from 'lucide-react';
 
 export const ShoppingListView = () => {
-  const [activeTab, setActiveTab] = useState<'list' | 'receipts'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'receipts' | 'analytics'>('list');
   const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null);
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
@@ -29,6 +31,7 @@ export const ShoppingListView = () => {
   const [categoryToEdit, setCategoryToEdit] = useState<CategoryWithItems | null>(null);
   const [listManagementOpen, setListManagementOpen] = useState(false);
   const [listSwitcherOpen, setListSwitcherOpen] = useState(false);
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [allLists, setAllLists] = useState<any[]>([]);
   const [isCreatingNewList, setIsCreatingNewList] = useState(false);
   const [editingList, setEditingList] = useState<any | null>(null);
@@ -49,7 +52,8 @@ export const ShoppingListView = () => {
     switchList,
     getAllLists,
     calculateSubtotal,
-    getItemsWithPrice
+    getItemsWithPrice,
+    addCategory
   } = useShoppingList();
 
   const {
@@ -105,6 +109,10 @@ export const ShoppingListView = () => {
     }
   };
 
+  const handleAddCategory = (categoryName: string) => {
+    addCategory(categoryName);
+  };
+
   const handleCheckout = async (data: {
     title: string;
     paymentMethod: string;
@@ -139,6 +147,28 @@ export const ShoppingListView = () => {
     setReceiptDetailOpen(true);
   };
 
+  const getHeaderTitle = () => {
+    switch (activeTab) {
+      case 'list':
+        return currentList?.name || 'Lista de Compras';
+      case 'receipts':
+        return 'Notas Fiscais';
+      case 'analytics':
+        return 'Análise de Gastos';
+    }
+  };
+
+  const getHeaderIcon = () => {
+    switch (activeTab) {
+      case 'list':
+        return <ShoppingCart className="w-5 h-5 text-primary-foreground" />;
+      case 'receipts':
+        return <ReceiptIcon className="w-5 h-5 text-primary-foreground" />;
+      case 'analytics':
+        return <BarChart3 className="w-5 h-5 text-primary-foreground" />;
+    }
+  };
+
   if (listLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -155,11 +185,11 @@ export const ShoppingListView = () => {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 flex-1">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-primary-foreground" />
+                {getHeaderIcon()}
               </div>
               <div>
                 <h1 className="text-lg font-bold text-foreground">
-                  {activeTab === 'list' ? currentList?.name || 'Lista de Compras' : 'Notas Fiscais'}
+                  {getHeaderTitle()}
                 </h1>
                 {activeTab === 'list' && (
                   <p className="text-xs text-muted-foreground">
@@ -168,21 +198,33 @@ export const ShoppingListView = () => {
                 )}
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleOpenListSwitcher}
-              title="Trocar lista"
-            >
-              <List className="w-5 h-5" />
-            </Button>
+            {activeTab === 'list' && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setAddCategoryOpen(true)}
+                  title="Nova seção"
+                >
+                  <Plus className="w-5 h-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleOpenListSwitcher}
+                  title="Trocar lista"
+                >
+                  <List className="w-5 h-5" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       {/* Content */}
       <main className="max-w-lg mx-auto px-4 py-4 pb-52">
-        {activeTab === 'list' ? (
+        {activeTab === 'list' && (
           <div className="space-y-4">
             {categories.map((category) => (
               <CategorySection
@@ -197,8 +239,20 @@ export const ShoppingListView = () => {
                 onEditItemName={handleItemEditClick}
               />
             ))}
+            
+            {/* Add category button at the bottom */}
+            <Button
+              variant="outline"
+              className="w-full border-dashed"
+              onClick={() => setAddCategoryOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar nova seção
+            </Button>
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'receipts' && (
           <div className="space-y-4">
             {receiptsLoading ? (
               <div className="flex justify-center py-8">
@@ -224,6 +278,8 @@ export const ShoppingListView = () => {
             )}
           </div>
         )}
+
+        {activeTab === 'analytics' && <AnalyticsView />}
       </main>
 
       {/* Floating Subtotal */}
@@ -273,6 +329,12 @@ export const ShoppingListView = () => {
         open={categoryEditOpen}
         onClose={() => setCategoryEditOpen(false)}
         onSave={handleCategoryNameSave}
+      />
+
+      <AddCategoryDialog
+        open={addCategoryOpen}
+        onClose={setAddCategoryOpen}
+        onSave={handleAddCategory}
       />
 
       <CheckoutDialog
