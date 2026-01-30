@@ -11,12 +11,13 @@ import { CategoryEditDialog } from '@/components/CategoryEditDialog';
 import { ListManagementDialog } from '@/components/ListManagementDialog';
 import { ListSwitcherDialog } from '@/components/ListSwitcherDialog';
 import { AddCategoryDialog } from '@/components/AddCategoryDialog';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { AnalyticsView } from '@/components/AnalyticsView';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { ShoppingItem, CategoryWithItems } from '@/types/shopping';
 import { ReceiptWithItems } from '@/hooks/useReceipts';
-import { ShoppingCart, Receipt as ReceiptIcon, Loader2, List, Plus, BarChart3 } from 'lucide-react';
+import { ShoppingCart, Receipt as ReceiptIcon, Loader2, List, Plus, BarChart3, GripVertical } from 'lucide-react';
 
 export const ShoppingListView = () => {
   const [activeTab, setActiveTab] = useState<'list' | 'receipts' | 'analytics'>('list');
@@ -35,6 +36,9 @@ export const ShoppingListView = () => {
   const [allLists, setAllLists] = useState<any[]>([]);
   const [isCreatingNewList, setIsCreatingNewList] = useState(false);
   const [editingList, setEditingList] = useState<any | null>(null);
+  const [deleteCategoryDialogOpen, setDeleteCategoryDialogOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(null);
 
   const {
     currentList,
@@ -50,6 +54,9 @@ export const ShoppingListView = () => {
     updateListName,
     createCustomList,
     switchList,
+    deleteCategory,
+    deleteList,
+    reorderCategories,
     getAllLists,
     calculateSubtotal,
     getItemsWithPrice,
@@ -111,6 +118,42 @@ export const ShoppingListView = () => {
 
   const handleAddCategory = (categoryName: string) => {
     addCategory(categoryName);
+  };
+
+  const handleDeleteCategoryClick = (categoryId: string) => {
+    setCategoryToDelete(categoryId);
+    setDeleteCategoryDialogOpen(true);
+  };
+
+  const handleConfirmDeleteCategory = () => {
+    if (categoryToDelete) {
+      deleteCategory(categoryToDelete);
+      setCategoryToDelete(null);
+    }
+  };
+
+  const handleCategoryDragStart = (e: React.DragEvent, categoryId: string) => {
+    setDraggedCategoryId(categoryId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleCategoryDragOver = (e: React.DragEvent, categoryId: string) => {
+    e.preventDefault();
+    if (!draggedCategoryId || draggedCategoryId === categoryId) return;
+    
+    const currentIndex = categories.findIndex(c => c.id === draggedCategoryId);
+    const targetIndex = categories.findIndex(c => c.id === categoryId);
+    
+    if (currentIndex !== -1 && targetIndex !== -1) {
+      const newOrder = [...categories];
+      const [removed] = newOrder.splice(currentIndex, 1);
+      newOrder.splice(targetIndex, 0, removed);
+      reorderCategories(newOrder.map(c => c.id));
+    }
+  };
+
+  const handleCategoryDragEnd = () => {
+    setDraggedCategoryId(null);
   };
 
   const handleCheckout = async (data: {
@@ -227,17 +270,29 @@ export const ShoppingListView = () => {
         {activeTab === 'list' && (
           <div className="space-y-4">
             {categories.map((category) => (
-              <CategorySection
+              <div
                 key={category.id}
-                category={category}
-                onQuantityChange={updateItemQuantity}
-                onToggleChecked={toggleItemChecked}
-                onPriceClick={handlePriceClick}
-                onDeleteItem={deleteItem}
-                onAddItem={addItem}
-                onEditCategoryName={handleCategoryEditClick}
-                onEditItemName={handleItemEditClick}
-              />
+                draggable
+                onDragStart={(e) => handleCategoryDragStart(e, category.id)}
+                onDragOver={(e) => handleCategoryDragOver(e, category.id)}
+                onDragEnd={handleCategoryDragEnd}
+              >
+                <CategorySection
+                  category={category}
+                  onQuantityChange={updateItemQuantity}
+                  onToggleChecked={toggleItemChecked}
+                  onPriceClick={handlePriceClick}
+                  onDeleteItem={deleteItem}
+                  onAddItem={addItem}
+                  onEditCategoryName={handleCategoryEditClick}
+                  onEditItemName={handleItemEditClick}
+                  onDeleteCategory={handleDeleteCategoryClick}
+                  isDragging={draggedCategoryId === category.id}
+                  dragHandleProps={{
+                    onMouseDown: (e) => e.stopPropagation()
+                  }}
+                />
+              </div>
             ))}
             
             {/* Add category button at the bottom */}
@@ -369,6 +424,7 @@ export const ShoppingListView = () => {
         currentListId={currentList?.id || null}
         lists={allLists}
         onSwitchList={switchList}
+        onDeleteList={deleteList}
         onCreateNew={() => {
           setIsCreatingNewList(true);
           setEditingList(null);
@@ -379,6 +435,14 @@ export const ShoppingListView = () => {
           setIsCreatingNewList(false);
           setListManagementOpen(true);
         }}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteCategoryDialogOpen}
+        onClose={() => setDeleteCategoryDialogOpen(false)}
+        onConfirm={handleConfirmDeleteCategory}
+        title="Excluir seção?"
+        description="Tem certeza que deseja excluir esta seção? Todos os itens dentro dela serão removidos permanentemente."
       />
     </div>
   );

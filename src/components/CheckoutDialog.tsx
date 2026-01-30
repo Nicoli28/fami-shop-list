@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ShoppingItem } from '@/types/shopping';
 import { Receipt, CreditCard, Banknote, QrCode } from 'lucide-react';
 
@@ -36,11 +35,16 @@ export const CheckoutDialog = ({
   const [hasDiscount, setHasDiscount] = useState(false);
   const [discountAmount, setDiscountAmount] = useState('');
   const [market, setMarket] = useState('');
+  const [cardBrand, setCardBrand] = useState('');
 
   const handleConfirm = () => {
+    let finalPaymentMethod = paymentMethod;
+    if ((paymentMethod === 'vr' || paymentMethod === 'va') && cardBrand) {
+      finalPaymentMethod = `${paymentMethod.toUpperCase()} - ${cardBrand}`;
+    }
     onConfirm({
       title,
-      paymentMethod,
+      paymentMethod: finalPaymentMethod,
       totalAmount: parseFloat(totalAmount) || subtotal,
       hasDiscount,
       discountAmount: parseFloat(discountAmount) || 0,
@@ -53,7 +57,17 @@ export const CheckoutDialog = ({
     { value: 'pix', label: 'PIX', icon: QrCode },
     { value: 'credit', label: 'Cartão de Crédito', icon: CreditCard },
     { value: 'debit', label: 'Cartão de Débito', icon: CreditCard },
-    { value: 'cash', label: 'Dinheiro', icon: Banknote }
+    { value: 'cash', label: 'Dinheiro', icon: Banknote },
+    { value: 'vr', label: 'VR', icon: CreditCard },
+    { value: 'va', label: 'VA', icon: CreditCard }
+  ];
+
+  const cardBrands = [
+    { value: 'pluxee', label: 'Pluxee' },
+    { value: 'alelo', label: 'Alelo' },
+    { value: 'flash', label: 'Flash' },
+    { value: 'ticket', label: 'Ticket' },
+    { value: 'vr', label: 'VR' }
   ];
 
   return (
@@ -105,7 +119,12 @@ export const CheckoutDialog = ({
               {paymentMethods.map((method) => (
                 <button
                   key={method.value}
-                  onClick={() => setPaymentMethod(method.value)}
+                  onClick={() => {
+                    setPaymentMethod(method.value);
+                    if (method.value !== 'vr' && method.value !== 'va') {
+                      setCardBrand('');
+                    }
+                  }}
                   className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
                     paymentMethod === method.value
                       ? 'border-primary bg-primary/10'
@@ -118,6 +137,27 @@ export const CheckoutDialog = ({
               ))}
             </div>
           </div>
+
+          {(paymentMethod === 'vr' || paymentMethod === 'va') && (
+            <div className="space-y-2 animate-fade-in">
+              <Label>Bandeira do cartão</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {cardBrands.map((brand) => (
+                  <button
+                    key={brand.value}
+                    onClick={() => setCardBrand(brand.label)}
+                    className={`p-2 rounded-lg border-2 text-sm transition-all ${
+                      cardBrand === brand.label
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    {brand.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="total">Valor total da compra (R$)</Label>

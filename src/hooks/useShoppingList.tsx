@@ -426,6 +426,76 @@ export const useShoppingList = () => {
     toast.success('Seção criada!');
   };
 
+  const deleteCategory = async (categoryId: string) => {
+    // First delete all items in the category
+    const { error: itemsError } = await supabase
+      .from('shopping_items')
+      .delete()
+      .eq('category_id', categoryId);
+
+    if (itemsError) {
+      toast.error('Erro ao remover itens da seção');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', categoryId);
+
+    if (error) {
+      toast.error('Erro ao remover seção');
+      return;
+    }
+
+    setCategories(prev => prev.filter(cat => cat.id !== categoryId));
+    toast.success('Seção removida!');
+  };
+
+  const deleteList = async (listId: string) => {
+    // Get all categories for this list
+    const { data: cats } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('list_id', listId);
+
+    if (cats && cats.length > 0) {
+      const categoryIds = cats.map(c => c.id);
+      
+      // Delete all items in these categories
+      await supabase
+        .from('shopping_items')
+        .delete()
+        .in('category_id', categoryIds);
+
+      // Delete all categories
+      await supabase
+        .from('categories')
+        .delete()
+        .eq('list_id', listId);
+    }
+
+    // Delete the list
+    const { error } = await supabase
+      .from('shopping_lists')
+      .delete()
+      .eq('id', listId);
+
+    if (error) {
+      toast.error('Erro ao remover lista');
+      return;
+    }
+
+    // If we deleted the current list, fetch or create a new one
+    if (currentList?.id === listId) {
+      setCurrentList(null);
+      setCategories([]);
+      await fetchOrCreateList();
+    }
+
+    toast.success('Lista removida!');
+  };
+
   const switchList = async (listId: string) => {
     // Deactivate current list
     if (currentList) {
@@ -487,6 +557,43 @@ export const useShoppingList = () => {
     );
   }, [categories]);
 
+  const reorderItems = async (categoryId: string, itemIds: string[]) => {
+    const updates = itemIds.map((id, index) => 
+      supabase
+        .from('shopping_items')
+        .update({ sort_order: index })
+        .eq('id', id)
+    );
+
+    await Promise.all(updates);
+
+    setCategories(prev => prev.map(cat => {
+      if (cat.id !== categoryId) return cat;
+      const reorderedItems = itemIds
+        .map(id => cat.items.find(item => item.id === id))
+        .filter(Boolean) as ShoppingItem[];
+      return { ...cat, items: reorderedItems };
+    }));
+  };
+
+  const reorderCategories = async (categoryIds: string[]) => {
+    const updates = categoryIds.map((id, index) =>
+      supabase
+        .from('categories')
+        .update({ sort_order: index })
+        .eq('id', id)
+    );
+
+    await Promise.all(updates);
+
+    setCategories(prev => {
+      const reordered = categoryIds
+        .map(id => prev.find(cat => cat.id === id))
+        .filter(Boolean) as CategoryWithItems[];
+      return reordered;
+    });
+  };
+
   useEffect(() => {
     if (user) {
       fetchOrCreateList();
@@ -507,6 +614,10 @@ export const useShoppingList = () => {
     updateListName,
     createCustomList,
     switchList,
+    deleteCategory,
+    deleteList,
+    reorderItems,
+    reorderCategories,
     getAllLists,
     calculateSubtotal,
     getItemsWithPrice,
