@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, Edit2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Edit2, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ShoppingItemCard } from './ShoppingItemCard';
@@ -15,6 +15,10 @@ interface CategorySectionProps {
   onAddItem: (categoryId: string, name: string) => void;
   onEditCategoryName: (category: CategoryWithItems) => void;
   onEditItemName: (item: ShoppingItem) => void;
+  onDeleteCategory?: (categoryId: string) => void;
+  onReorderItems?: (categoryId: string, itemIds: string[]) => void;
+  isDragging?: boolean;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 const getCategoryIcon = (name: string): string => {
@@ -40,7 +44,11 @@ export const CategorySection = ({
   onDeleteItem,
   onAddItem,
   onEditCategoryName,
-  onEditItemName
+  onEditItemName,
+  onDeleteCategory,
+  onReorderItems,
+  isDragging,
+  dragHandleProps
 }: CategorySectionProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [newItemName, setNewItemName] = useState('');
@@ -65,27 +73,47 @@ export const CategorySection = ({
   const checkedCount = category.items.filter(i => i.is_checked).length;
 
   return (
-    <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm">
+    <div className={cn(
+      "bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm",
+      isDragging && "opacity-50"
+    )}>
       {/* Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
-      >
-        <div className="flex items-center gap-3 flex-1">
-          <span className="text-2xl">{getCategoryIcon(category.name)}</span>
-          <div className="text-left">
-            <h3 className="font-semibold text-foreground">{category.name}</h3>
-            <p className="text-xs text-muted-foreground">
-              {checkedCount}/{itemCount} itens
-            </p>
+      <div className="flex items-center">
+        {dragHandleProps && (
+          <div
+            {...dragHandleProps}
+            className="p-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+          >
+            <GripVertical className="w-5 h-5" />
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {categoryTotal > 0 && (
-            <span className="text-sm font-semibold text-primary">
-              R$ {categoryTotal.toFixed(2)}
-            </span>
-          )}
+        )}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex-1 flex items-center justify-between p-4 pl-2 hover:bg-accent/50 transition-colors"
+        >
+          <div className="flex items-center gap-3 flex-1">
+            <span className="text-2xl">{getCategoryIcon(category.name)}</span>
+            <div className="text-left">
+              <h3 className="font-semibold text-foreground">{category.name}</h3>
+              <p className="text-xs text-muted-foreground">
+                {checkedCount}/{itemCount} itens
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {categoryTotal > 0 && (
+              <span className="text-sm font-semibold text-primary">
+                R$ {categoryTotal.toFixed(2)}
+              </span>
+            )}
+            {isExpanded ? (
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            )}
+          </div>
+        </button>
+        <div className="flex items-center pr-2">
           <Button
             variant="ghost"
             size="icon"
@@ -98,13 +126,22 @@ export const CategorySection = ({
           >
             <Edit2 className="w-4 h-4" />
           </Button>
-          {isExpanded ? (
-            <ChevronDown className="w-5 h-5 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          {onDeleteCategory && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-full text-muted-foreground hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteCategory(category.id);
+              }}
+              title="Excluir categoria"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           )}
         </div>
-      </button>
+      </div>
 
       {/* Items */}
       <div className={cn(
