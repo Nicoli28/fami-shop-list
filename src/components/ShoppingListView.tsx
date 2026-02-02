@@ -17,7 +17,8 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { ShoppingItem, CategoryWithItems } from '@/types/shopping';
 import { ReceiptWithItems } from '@/hooks/useReceipts';
-import { ShoppingCart, Receipt as ReceiptIcon, Loader2, List, Plus, BarChart3, GripVertical } from 'lucide-react';
+import { ShoppingCart, Receipt as ReceiptIcon, Loader2, List, Plus, BarChart3 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export const ShoppingListView = () => {
   const [activeTab, setActiveTab] = useState<'list' | 'receipts' | 'analytics'>('list');
@@ -38,7 +39,8 @@ export const ShoppingListView = () => {
   const [editingList, setEditingList] = useState<any | null>(null);
   const [deleteCategoryDialogOpen, setDeleteCategoryDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
-  const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(null);
+  const [draggedCategoryIndex, setDraggedCategoryIndex] = useState<number | null>(null);
+  const [dragOverCategoryIndex, setDragOverCategoryIndex] = useState<number | null>(null);
 
   const {
     currentList,
@@ -57,10 +59,12 @@ export const ShoppingListView = () => {
     deleteCategory,
     deleteList,
     reorderCategories,
+    reorderItems,
     getAllLists,
     calculateSubtotal,
     getItemsWithPrice,
-    addCategory
+    addCategory,
+    uncheckAllItems
   } = useShoppingList();
 
   const {
@@ -132,28 +136,37 @@ export const ShoppingListView = () => {
     }
   };
 
-  const handleCategoryDragStart = (e: React.DragEvent, categoryId: string) => {
-    setDraggedCategoryId(categoryId);
+  const handleCategoryDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedCategoryIndex(index);
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleCategoryDragOver = (e: React.DragEvent, categoryId: string) => {
+  const handleCategoryDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    if (!draggedCategoryId || draggedCategoryId === categoryId) return;
-    
-    const currentIndex = categories.findIndex(c => c.id === draggedCategoryId);
-    const targetIndex = categories.findIndex(c => c.id === categoryId);
-    
-    if (currentIndex !== -1 && targetIndex !== -1) {
-      const newOrder = [...categories];
-      const [removed] = newOrder.splice(currentIndex, 1);
-      newOrder.splice(targetIndex, 0, removed);
-      reorderCategories(newOrder.map(c => c.id));
+    if (draggedCategoryIndex === null || draggedCategoryIndex === index) return;
+    setDragOverCategoryIndex(index);
+  };
+
+  const handleCategoryDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedCategoryIndex === null || draggedCategoryIndex === targetIndex) {
+      setDraggedCategoryIndex(null);
+      setDragOverCategoryIndex(null);
+      return;
     }
+
+    const newCategories = [...categories];
+    const [removed] = newCategories.splice(draggedCategoryIndex, 1);
+    newCategories.splice(targetIndex, 0, removed);
+    reorderCategories(newCategories.map(c => c.id));
+    
+    setDraggedCategoryIndex(null);
+    setDragOverCategoryIndex(null);
   };
 
   const handleCategoryDragEnd = () => {
-    setDraggedCategoryId(null);
+    setDraggedCategoryIndex(null);
+    setDragOverCategoryIndex(null);
   };
 
   const handleCheckout = async (data: {
@@ -181,6 +194,9 @@ export const ShoppingListView = () => {
       items,
       currentList?.id
     );
+
+    // Uncheck all items so they're ready for next shopping trip
+    await uncheckAllItems();
 
     setActiveTab('receipts');
   };
@@ -269,13 +285,19 @@ export const ShoppingListView = () => {
       <main className="max-w-lg mx-auto px-4 py-4 pb-52">
         {activeTab === 'list' && (
           <div className="space-y-4">
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <div
                 key={category.id}
                 draggable
-                onDragStart={(e) => handleCategoryDragStart(e, category.id)}
-                onDragOver={(e) => handleCategoryDragOver(e, category.id)}
+                onDragStart={(e) => handleCategoryDragStart(e, index)}
+                onDragOver={(e) => handleCategoryDragOver(e, index)}
+                onDrop={(e) => handleCategoryDrop(e, index)}
                 onDragEnd={handleCategoryDragEnd}
+                className={cn(
+                  "transition-all",
+                  draggedCategoryIndex === index && "opacity-50 scale-[0.98]",
+                  dragOverCategoryIndex === index && "ring-2 ring-primary rounded-2xl"
+                )}
               >
                 <CategorySection
                   category={category}
@@ -287,10 +309,8 @@ export const ShoppingListView = () => {
                   onEditCategoryName={handleCategoryEditClick}
                   onEditItemName={handleItemEditClick}
                   onDeleteCategory={handleDeleteCategoryClick}
-                  isDragging={draggedCategoryId === category.id}
-                  dragHandleProps={{
-                    onMouseDown: (e) => e.stopPropagation()
-                  }}
+                  onReorderItems={reorderItems}
+                  isReorderMode={draggedCategoryIndex === index}
                 />
               </div>
             ))}

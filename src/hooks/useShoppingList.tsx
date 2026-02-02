@@ -557,7 +557,17 @@ export const useShoppingList = () => {
     );
   }, [categories]);
 
-  const reorderItems = async (categoryId: string, itemIds: string[]) => {
+const reorderItems = async (categoryId: string, itemIds: string[]) => {
+    // Update local state immediately for better UX
+    setCategories(prev => prev.map(cat => {
+      if (cat.id !== categoryId) return cat;
+      const reorderedItems = itemIds
+        .map(id => cat.items.find(item => item.id === id))
+        .filter(Boolean) as ShoppingItem[];
+      return { ...cat, items: reorderedItems };
+    }));
+
+    // Then persist to database
     const updates = itemIds.map((id, index) => 
       supabase
         .from('shopping_items')
@@ -566,14 +576,27 @@ export const useShoppingList = () => {
     );
 
     await Promise.all(updates);
+  };
 
-    setCategories(prev => prev.map(cat => {
-      if (cat.id !== categoryId) return cat;
-      const reorderedItems = itemIds
-        .map(id => cat.items.find(item => item.id === id))
-        .filter(Boolean) as ShoppingItem[];
-      return { ...cat, items: reorderedItems };
-    }));
+  const uncheckAllItems = async () => {
+    if (!currentList) return;
+
+    const categoryIds = categories.map(c => c.id);
+    
+    const { error } = await supabase
+      .from('shopping_items')
+      .update({ is_checked: false })
+      .in('category_id', categoryIds);
+
+    if (error) {
+      console.error('Error unchecking items:', error);
+      return;
+    }
+
+    setCategories(prev => prev.map(cat => ({
+      ...cat,
+      items: cat.items.map(item => ({ ...item, is_checked: false }))
+    })));
   };
 
   const reorderCategories = async (categoryIds: string[]) => {
@@ -622,6 +645,7 @@ export const useShoppingList = () => {
     calculateSubtotal,
     getItemsWithPrice,
     addCategory,
+    uncheckAllItems,
     refreshList: fetchOrCreateList
   };
 };

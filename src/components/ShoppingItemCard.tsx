@@ -1,4 +1,4 @@
-import { Minus, Plus, Check, Trash2, Edit2 } from 'lucide-react';
+import { Minus, Plus, Check, Trash2, Edit2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ShoppingItem } from '@/types/shopping';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ interface ShoppingItemCardProps {
   onPriceClick: (item: ShoppingItem) => void;
   onDelete: (itemId: string) => void;
   onEditName: (item: ShoppingItem) => void;
+  showDragHandle?: boolean;
 }
 
 export const ShoppingItemCard = ({
@@ -19,6 +20,7 @@ export const ShoppingItemCard = ({
   onPriceClick,
   onDelete,
   onEditName,
+  showDragHandle = false,
 }: ShoppingItemCardProps) => {
   const totalPrice =
     item.unit_price && item.quantity > 0
@@ -32,8 +34,14 @@ export const ShoppingItemCard = ({
         item.is_checked && 'opacity-60 bg-muted/50'
       )}
     >
-      {/* Row 1: Checkbox + Name + Actions */}
+      {/* Row 1: Drag Handle + Checkbox + Name + Actions */}
       <div className="flex items-center gap-2">
+        {showDragHandle && (
+          <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none">
+            <GripVertical className="w-4 h-4" />
+          </div>
+        )}
+        
         <button
           onClick={() => onToggleChecked(item.id)}
           className={cn(
@@ -84,7 +92,7 @@ export const ShoppingItemCard = ({
       </div>
 
       {/* Row 2: Quantity controls + Total price */}
-      <div className="flex justify-between items-center pl-8">
+      <div className={cn("flex justify-between items-center", showDragHandle ? "pl-10" : "pl-8")}>
         <div className="flex items-center gap-1">
           <Button
             size="icon"

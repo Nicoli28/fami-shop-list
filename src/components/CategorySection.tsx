@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ChevronDown, ChevronRight, Plus, Edit2, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,8 +17,8 @@ interface CategorySectionProps {
   onEditItemName: (item: ShoppingItem) => void;
   onDeleteCategory?: (categoryId: string) => void;
   onReorderItems?: (categoryId: string, itemIds: string[]) => void;
-  isDragging?: boolean;
-  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+  isReorderMode?: boolean;
+  onDragHandlePress?: () => void;
 }
 
 const getCategoryIcon = (name: string): string => {
@@ -47,12 +47,14 @@ export const CategorySection = ({
   onEditItemName,
   onDeleteCategory,
   onReorderItems,
-  isDragging,
-  dragHandleProps
+  isReorderMode,
+  onDragHandlePress
 }: CategorySectionProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [newItemName, setNewItemName] = useState('');
   const [showAddInput, setShowAddInput] = useState(false);
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
 
   const handleAddItem = () => {
     if (newItemName.trim()) {
@@ -72,24 +74,80 @@ export const CategorySection = ({
   const itemCount = category.items.length;
   const checkedCount = category.items.filter(i => i.is_checked).length;
 
+  // Item drag handlers
+  const handleItemDragStart = (e: React.DragEvent, itemId: string) => {
+    e.stopPropagation();
+    setDraggedItemId(itemId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', itemId);
+  };
+
+  const handleItemDragOver = (e: React.DragEvent, itemId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedItemId || draggedItemId === itemId) return;
+    setDragOverItemId(itemId);
+  };
+
+  const handleItemDragLeave = () => {
+    setDragOverItemId(null);
+  };
+
+  const handleItemDrop = (e: React.DragEvent, targetItemId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedItemId || draggedItemId === targetItemId || !onReorderItems) {
+      setDraggedItemId(null);
+      setDragOverItemId(null);
+      return;
+    }
+
+    const currentIndex = category.items.findIndex(i => i.id === draggedItemId);
+    const targetIndex = category.items.findIndex(i => i.id === targetItemId);
+
+    if (currentIndex !== -1 && targetIndex !== -1) {
+      const newItems = [...category.items];
+      const [removed] = newItems.splice(currentIndex, 1);
+      newItems.splice(targetIndex, 0, removed);
+      onReorderItems(category.id, newItems.map(i => i.id));
+    }
+
+    setDraggedItemId(null);
+    setDragOverItemId(null);
+  };
+
+  const handleItemDragEnd = () => {
+    setDraggedItemId(null);
+    setDragOverItemId(null);
+  };
+
+  const handleDragHandleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    // Auto-collapse the section when user starts to drag
+    if (isExpanded) {
+      setIsExpanded(false);
+    }
+    onDragHandlePress?.();
+  };
+
   return (
     <div className={cn(
-      "bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm",
-      isDragging && "opacity-50"
+      "bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm transition-all",
+      isReorderMode && "ring-2 ring-primary/50"
     )}>
       {/* Header */}
       <div className="flex items-center">
-        {dragHandleProps && (
-          <div
-            {...dragHandleProps}
-            className="p-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-          >
-            <GripVertical className="w-5 h-5" />
-          </div>
-        )}
+        <div
+          className="p-3 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none select-none"
+          onMouseDown={handleDragHandleMouseDown}
+          onTouchStart={handleDragHandleMouseDown}
+        >
+          <GripVertical className="w-5 h-5" />
+        </div>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex-1 flex items-center justify-between p-4 pl-2 hover:bg-accent/50 transition-colors"
+          className="flex-1 flex items-center justify-between p-4 pl-0 hover:bg-accent/50 transition-colors"
         >
           <div className="flex items-center gap-3 flex-1">
             <span className="text-2xl">{getCategoryIcon(category.name)}</span>
@@ -150,15 +208,30 @@ export const CategorySection = ({
       )}>
         <div className="p-3 pt-0 space-y-2">
           {category.items.map(item => (
-            <ShoppingItemCard
+            <div
               key={item.id}
-              item={item}
-              onQuantityChange={onQuantityChange}
-              onToggleChecked={onToggleChecked}
-              onPriceClick={onPriceClick}
-              onDelete={onDeleteItem}
-              onEditName={onEditItemName}
-            />
+              draggable
+              onDragStart={(e) => handleItemDragStart(e, item.id)}
+              onDragOver={(e) => handleItemDragOver(e, item.id)}
+              onDragLeave={handleItemDragLeave}
+              onDrop={(e) => handleItemDrop(e, item.id)}
+              onDragEnd={handleItemDragEnd}
+              className={cn(
+                "transition-all",
+                draggedItemId === item.id && "opacity-50 scale-95",
+                dragOverItemId === item.id && "ring-2 ring-primary/50 rounded-xl"
+              )}
+            >
+              <ShoppingItemCard
+                item={item}
+                onQuantityChange={onQuantityChange}
+                onToggleChecked={onToggleChecked}
+                onPriceClick={onPriceClick}
+                onDelete={onDeleteItem}
+                onEditName={onEditItemName}
+                showDragHandle
+              />
+            </div>
           ))}
 
           {/* Add item */}
