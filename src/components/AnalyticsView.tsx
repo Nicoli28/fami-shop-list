@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useReceipts } from '@/hooks/useReceipts';
 import { usePriceHistory } from '@/hooks/usePriceHistory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { TrendingUp, Store, Calendar, DollarSign, Loader2 } from 'lucide-react';
+import { TrendingUp, Store, Calendar, DollarSign, Loader2, History } from 'lucide-react';
+import { PriceHistoryDialog } from './PriceHistoryDialog';
 
 const CHART_COLORS = [
   'hsl(var(--primary))',
@@ -17,6 +19,7 @@ const CHART_COLORS = [
 export const AnalyticsView = () => {
   const { receipts, loading: receiptsLoading } = useReceipts();
   const { priceHistory } = usePriceHistory();
+  const [priceHistoryOpen, setPriceHistoryOpen] = useState(false);
 
   const monthlySpending = useMemo(() => {
     const monthMap = new Map<string, number>();
@@ -117,6 +120,16 @@ export const AnalyticsView = () => {
 
   return (
     <div className="space-y-4">
+      {/* Price History Button */}
+      <Button 
+        variant="outline" 
+        className="w-full"
+        onClick={() => setPriceHistoryOpen(true)}
+      >
+        <History className="w-4 h-4 mr-2" />
+        Ver Histórico de Preços
+      </Button>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
@@ -284,6 +297,11 @@ export const AnalyticsView = () => {
           </CardContent>
         </Card>
       )}
+
+      <PriceHistoryDialog 
+        open={priceHistoryOpen} 
+        onClose={() => setPriceHistoryOpen(false)} 
+      />
     </div>
   );
 };
