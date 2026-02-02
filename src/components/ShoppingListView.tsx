@@ -64,7 +64,7 @@ export const ShoppingListView = () => {
     calculateSubtotal,
     getItemsWithPrice,
     addCategory,
-    uncheckAllItems
+    resetItemsAfterCheckout
   } = useShoppingList();
 
   const {
@@ -195,8 +195,8 @@ export const ShoppingListView = () => {
       currentList?.id
     );
 
-    // Uncheck all items so they're ready for next shopping trip
-    await uncheckAllItems();
+    // Reset items (uncheck and clear prices) for next shopping trip
+    await resetItemsAfterCheckout();
 
     setActiveTab('receipts');
   };

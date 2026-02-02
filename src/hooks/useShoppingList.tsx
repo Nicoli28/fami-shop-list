@@ -578,24 +578,24 @@ const reorderItems = async (categoryId: string, itemIds: string[]) => {
     await Promise.all(updates);
   };
 
-  const uncheckAllItems = async () => {
+  const resetItemsAfterCheckout = async () => {
     if (!currentList) return;
 
     const categoryIds = categories.map(c => c.id);
     
     const { error } = await supabase
       .from('shopping_items')
-      .update({ is_checked: false })
+      .update({ is_checked: false, unit_price: null, market: null })
       .in('category_id', categoryIds);
 
     if (error) {
-      console.error('Error unchecking items:', error);
+      console.error('Error resetting items:', error);
       return;
     }
 
     setCategories(prev => prev.map(cat => ({
       ...cat,
-      items: cat.items.map(item => ({ ...item, is_checked: false }))
+      items: cat.items.map(item => ({ ...item, is_checked: false, unit_price: null, market: null }))
     })));
   };
 
@@ -645,7 +645,7 @@ const reorderItems = async (categoryId: string, itemIds: string[]) => {
     calculateSubtotal,
     getItemsWithPrice,
     addCategory,
-    uncheckAllItems,
+    resetItemsAfterCheckout,
     refreshList: fetchOrCreateList
   };
 };
