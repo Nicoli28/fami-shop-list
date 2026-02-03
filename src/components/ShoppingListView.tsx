@@ -359,7 +359,9 @@ export const ShoppingListView = () => {
           </div>
         )}
 
-        {activeTab === 'scanner' && <ReceiptScannerView />}
+        {activeTab === 'scanner' && (
+          <ReceiptScannerView onReceiptSaved={() => setActiveTab('receipts')} />
+        )}
 
         {activeTab === 'analytics' && <AnalyticsView />}
       </main>
