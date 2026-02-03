@@ -1,10 +1,10 @@
-import { ShoppingCart, Receipt, LogOut, BarChart3 } from 'lucide-react';
+import { ShoppingCart, Receipt, LogOut, BarChart3, ScanLine } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 interface BottomNavigationProps {
-  activeTab: 'list' | 'receipts' | 'analytics';
-  onTabChange: (tab: 'list' | 'receipts' | 'analytics') => void;
+  activeTab: 'list' | 'receipts' | 'scanner' | 'analytics';
+  onTabChange: (tab: 'list' | 'receipts' | 'scanner' | 'analytics') => void;
 }
 
 export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationProps) => {
@@ -37,6 +37,19 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
         >
           <Receipt className="w-5 h-5" />
           <span className="text-xs font-medium">NF's</span>
+        </button>
+
+        <button
+          onClick={() => onTabChange('scanner')}
+          className={cn(
+            "flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all",
+            activeTab === 'scanner' 
+              ? "text-primary bg-primary/10" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <ScanLine className="w-5 h-5" />
+          <span className="text-xs font-medium">Escanear</span>
         </button>
 
         <button
