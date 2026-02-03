@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
-import { Camera, Upload, Loader2, Check, X, ImageIcon } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Camera, Upload, Loader2, Check, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useReceipts } from '@/hooks/useReceipts';
 import { toast } from 'sonner';
@@ -23,8 +24,14 @@ interface ScannedData {
   purchase_date: string | null;
 }
 
-export const ReceiptScannerView = () => {
+interface ReceiptScannerViewProps {
+  onReceiptSaved?: () => void;
+}
+
+export const ReceiptScannerView = ({ onReceiptSaved }: ReceiptScannerViewProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState('');
   const [scannedData, setScannedData] = useState<ScannedData | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [editableData, setEditableData] = useState<ScannedData | null>(null);
@@ -32,33 +39,82 @@ export const ReceiptScannerView = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { createReceipt } = useReceipts();
 
+  // Animate progress bar during processing
+  useEffect(() => {
+    if (!isProcessing) {
+      setProcessingProgress(0);
+      return;
+    }
+
+    const stages = [
+      { progress: 15, stage: 'Preparando imagem...' },
+      { progress: 35, stage: 'Enviando para análise...' },
+      { progress: 55, stage: 'Analisando nota fiscal...' },
+      { progress: 75, stage: 'Extraindo produtos...' },
+      { progress: 90, stage: 'Finalizando...' },
+    ];
+
+    let currentStage = 0;
+    setProcessingStage(stages[0].stage);
+    setProcessingProgress(stages[0].progress);
+
+    const interval = setInterval(() => {
+      currentStage++;
+      if (currentStage < stages.length) {
+        setProcessingProgress(stages[currentStage].progress);
+        setProcessingStage(stages[currentStage].stage);
+      }
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [isProcessing]);
+
   const processImage = async (base64Image: string) => {
     setIsProcessing(true);
+    setProcessingProgress(10);
+    setProcessingStage('Iniciando...');
+    
     try {
+      console.log('Starting receipt scan...');
       const { data, error } = await supabase.functions.invoke('scan-receipt', {
         body: { imageBase64: base64Image }
       });
 
+      console.log('Scan response:', { data, error });
+
       if (error) {
         console.error('Error calling scan-receipt:', error);
-        toast.error('Erro ao processar imagem');
+        toast.error('Erro ao processar imagem. Tente novamente.');
+        setPreviewImage(null);
         return;
       }
 
-      if (data.error) {
+      if (data?.error) {
         console.error('Error from edge function:', data.error);
         toast.error(data.error);
+        setPreviewImage(null);
         return;
       }
 
-      if (data.success && data.data) {
+      if (data?.success && data?.data) {
+        setProcessingProgress(100);
+        setProcessingStage('Concluído!');
+        
+        // Small delay to show 100% before switching views
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         setScannedData(data.data);
         setEditableData(data.data);
-        toast.success('Nota fiscal escaneada com sucesso!');
+        toast.success(`Nota fiscal escaneada! ${data.data.items?.length || 0} itens encontrados.`);
+      } else {
+        console.error('Unexpected response format:', data);
+        toast.error('Resposta inesperada do servidor. Tente novamente.');
+        setPreviewImage(null);
       }
     } catch (err) {
       console.error('Error processing image:', err);
-      toast.error('Erro ao processar imagem');
+      toast.error('Erro ao processar imagem. Verifique sua conexão.');
+      setPreviewImage(null);
     } finally {
       setIsProcessing(false);
     }
@@ -90,19 +146,25 @@ export const ReceiptScannerView = () => {
       ? `Compra - ${editableData.market}` 
       : `Compra escaneada - ${new Date().toLocaleDateString('pt-BR')}`;
 
-    const result = await createReceipt(
-      title,
-      editableData.total_amount,
-      editableData.payment_method || 'Não identificado',
-      false,
-      0,
-      editableData.market || '',
-      editableData.items
-    );
+    try {
+      const result = await createReceipt(
+        title,
+        editableData.total_amount,
+        editableData.payment_method || 'Não identificado',
+        false,
+        0,
+        editableData.market || '',
+        editableData.items
+      );
 
-    if (result) {
-      toast.success('Nota fiscal salva com sucesso!');
-      resetScanner();
+      if (result) {
+        resetScanner();
+        // Notify parent to switch to receipts tab
+        onReceiptSaved?.();
+      }
+    } catch (err) {
+      console.error('Error saving receipt:', err);
+      toast.error('Erro ao salvar nota fiscal. Tente novamente.');
     }
   };
 
@@ -212,21 +274,38 @@ export const ReceiptScannerView = () => {
         </div>
       )}
 
-      {/* Processing state */}
+      {/* Processing state with progress bar */}
       {isProcessing && (
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex flex-col items-center gap-4">
+        <Card className="border-primary/20">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center gap-5">
               {previewImage && (
-                <img 
-                  src={previewImage} 
-                  alt="Preview" 
-                  className="max-h-48 rounded-lg object-contain opacity-50"
-                />
+                <div className="relative">
+                  <img 
+                    src={previewImage} 
+                    alt="Preview" 
+                    className="max-h-40 rounded-lg object-contain opacity-60"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="bg-background/80 backdrop-blur-sm rounded-full p-3">
+                      <Sparkles className="w-8 h-8 text-primary animate-pulse" />
+                    </div>
+                  </div>
+                </div>
               )}
-              <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              <p className="text-muted-foreground">Processando nota fiscal...</p>
-              <p className="text-xs text-muted-foreground">Isso pode levar alguns segundos</p>
+              
+              <div className="w-full space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{processingStage}</span>
+                  <span className="text-primary font-medium">{processingProgress}%</span>
+                </div>
+                <Progress value={processingProgress} className="h-2" />
+              </div>
+              
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <p className="text-sm">Analisando com IA...</p>
+              </div>
             </div>
           </CardContent>
         </Card>
