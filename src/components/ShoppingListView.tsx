@@ -13,15 +13,16 @@ import { ListSwitcherDialog } from '@/components/ListSwitcherDialog';
 import { AddCategoryDialog } from '@/components/AddCategoryDialog';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { AnalyticsView } from '@/components/AnalyticsView';
+import { ReceiptScannerView } from '@/components/ReceiptScannerView';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { ShoppingItem, CategoryWithItems } from '@/types/shopping';
 import { ReceiptWithItems } from '@/hooks/useReceipts';
-import { ShoppingCart, Receipt as ReceiptIcon, Loader2, List, Plus, BarChart3 } from 'lucide-react';
+import { ShoppingCart, Receipt as ReceiptIcon, Loader2, List, Plus, BarChart3, ScanLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const ShoppingListView = () => {
-  const [activeTab, setActiveTab] = useState<'list' | 'receipts' | 'analytics'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'receipts' | 'scanner' | 'analytics'>('list');
   const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null);
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
@@ -212,6 +213,8 @@ export const ShoppingListView = () => {
         return currentList?.name || 'Lista de Compras';
       case 'receipts':
         return 'Notas Fiscais';
+      case 'scanner':
+        return 'Escanear NF';
       case 'analytics':
         return 'Análise de Gastos';
     }
@@ -223,6 +226,8 @@ export const ShoppingListView = () => {
         return <ShoppingCart className="w-5 h-5 text-primary-foreground" />;
       case 'receipts':
         return <ReceiptIcon className="w-5 h-5 text-primary-foreground" />;
+      case 'scanner':
+        return <ScanLine className="w-5 h-5 text-primary-foreground" />;
       case 'analytics':
         return <BarChart3 className="w-5 h-5 text-primary-foreground" />;
     }
@@ -353,6 +358,8 @@ export const ShoppingListView = () => {
             )}
           </div>
         )}
+
+        {activeTab === 'scanner' && <ReceiptScannerView />}
 
         {activeTab === 'analytics' && <AnalyticsView />}
       </main>
